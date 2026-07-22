@@ -62,6 +62,26 @@ export interface FrequencyData {
 }
 
 /**
+ * Reusable one-time audio analysis for deterministic textile generation
+ */
+export interface AudioFeatures {
+    tempo: number;
+    loudness: number;
+    beatIntensity: number;
+    rhythmComplexity: number;
+    pitchRange: number;
+    frequencySpectrum: number[];
+    spectralCentroid: number;
+    harmonicRichness: number;
+    dynamicChanges: number;
+    silenceRatio: number;
+    overallEnergy: number;
+    beatTimes: number[];
+    duration: number;
+    seed: number;
+}
+
+/**
  * Canvas rendering context
  */
 export interface CanvasRenderContext {

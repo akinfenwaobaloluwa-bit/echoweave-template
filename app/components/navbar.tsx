@@ -6,6 +6,13 @@
 import { useState, useEffect } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
+const applyTheme = (shouldBeDark: boolean) => {
+    document.documentElement.classList.toggle('dark', shouldBeDark);
+    document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute('content', shouldBeDark ? '#0f172a' : '#ffffff');
+};
+
 /**
  * Navbar component - displays the application header with logo and theme toggle
  */
@@ -22,13 +29,7 @@ export const Navbar = () => {
         const shouldBeDark = savedTheme ? savedTheme === 'dark' : prefersDark;
 
         setIsDark(shouldBeDark);
-
-        // Apply theme to document
-        if (shouldBeDark) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+        applyTheme(shouldBeDark);
     }, []);
 
     /**
@@ -40,13 +41,7 @@ export const Navbar = () => {
         const newIsDark = !isDark;
         setIsDark(newIsDark);
         localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
-
-        // Apply theme to document
-        if (newIsDark) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+        applyTheme(newIsDark);
     };
 
     // Prevent hydration mismatch by not rendering until mounted
@@ -62,7 +57,7 @@ export const Navbar = () => {
                             </div>
                             <div className="flex flex-col">
                                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">EchoWeave</h1>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Sound to Patterns</p>
+                                <h2 className="text-xs text-gray-500 dark:text-gray-400">Sound to Patterns</h2>
                             </div>
                         </div>
 
@@ -85,7 +80,7 @@ export const Navbar = () => {
                         </div>
                         <div className="flex flex-col">
                             <h1 className="text-xl font-bold text-gray-900 dark:text-white">EchoWeave</h1>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Sound to Patterns</p>
+                            <h2 className="text-xs text-gray-500 dark:text-gray-400">Sound to Patterns</h2>
                         </div>
                     </div>
 

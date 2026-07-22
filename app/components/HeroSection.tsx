@@ -33,17 +33,17 @@ export const HeroSection = ({ onStartClick }: HeroSectionProps) => {
                 >
                     {/* Main Title */}
                     <motion.h1
-                        className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight"
+                        className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-950 dark:text-white mb-6 tracking-tight"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.1 }}
                     >
-                        Echo<span className="text-transparent bg-clip-text from-amber-400 to-red-600">Weave</span>
+                        Echo<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-red-600 dark:from-amber-400 dark:to-red-600">Weave</span>
                     </motion.h1>
 
                     {/* Subtitle */}
                     <motion.p
-                        className="text-xl sm:text-2xl text-gray-300 mb-8 leading-relaxed"
+                        className="text-xl sm:text-2xl text-gray-700 dark:text-gray-300 mb-8 leading-relaxed"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.2 }}
@@ -53,7 +53,7 @@ export const HeroSection = ({ onStartClick }: HeroSectionProps) => {
 
                     {/* Description */}
                     <motion.p
-                        className="text-lg text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed"
+                        className="text-lg text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.3 }}
@@ -68,27 +68,27 @@ export const HeroSection = ({ onStartClick }: HeroSectionProps) => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.4 }}
                     >
-                        <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/10 backdrop-blur-sm">
+                        <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
                             <Music className="w-8 h-8 text-amber-400" />
-                            <span className="text-gray-300 font-semibold">Real-time Audio</span>
-                            <span className="text-sm text-gray-400">Live microphone or file upload</span>
+                            <span className="text-gray-900 dark:text-gray-300 font-semibold">Real-time Audio</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Live microphone or file upload</span>
                         </div>
-                        <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/10 backdrop-blur-sm">
+                        <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
                             <Palette className="w-8 h-8 text-amber-400" />
-                            <span className="text-gray-300 font-semibold">Multiple Patterns</span>
-                            <span className="text-sm text-gray-400">Kente, Adire, Aso Oke & more</span>
+                            <span className="text-gray-900 dark:text-gray-300 font-semibold">Multiple Patterns</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Kente, Adire, Aso Oke & more</span>
                         </div>
-                        <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/10 backdrop-blur-sm">
+                        <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
                             <Download className="w-8 h-8 text-amber-400" />
-                            <span className="text-gray-300 font-semibold">Export Artwork</span>
-                            <span className="text-sm text-gray-400">Download as PNG or SVG</span>
+                            <span className="text-gray-900 dark:text-gray-300 font-semibold">Export Artwork</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Download as PNG or SVG</span>
                         </div>
                     </motion.div>
 
                     {/* CTA Button */}
                     <motion.button
                         onClick={onStartClick}
-                        className="group relative inline-flex items-center gap-2 px-8 py-4 text-lg font-semibold text-white from-amber-500 to-red-600 rounded-lg hover:shadow-lg hover:shadow-amber-500/50 transition-all duration-300 transform hover:scale-105"
+                        className="group relative inline-flex items-center gap-2 px-8 py-4 text-lg font-semibold text-gray-950 dark:text-white bg-white/90 dark:bg-transparent border border-gray-200 dark:border-transparent from-amber-500 to-red-600 rounded-lg hover:shadow-lg hover:shadow-amber-500/50 transition-all duration-300 transform hover:scale-105"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.5 }}
