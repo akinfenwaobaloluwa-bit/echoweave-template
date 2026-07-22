@@ -3,6 +3,16 @@
 
 import { ColorPalette } from '@/app/types/pattern';
 
+const fallbackPalette: ColorPalette = {
+    name: 'Adire Indigo',
+    id: 'adire-indigo',
+    primary: '#1e3a8a',
+    secondary: '#ffffff',
+    accent: '#60a5fa',
+    background: '#0f172a',
+    text: '#f3f4f6',
+};
+
 /**
  * Color palettes inspired by African textiles
  * Each palette includes primary, secondary, accent, background, and text colors
@@ -60,8 +70,18 @@ export const colorPalettes: Record<string, ColorPalette> = {
  * @param paletteId - The ID of the palette to retrieve
  * @returns The color palette object
  */
-export const getPalette = (paletteId: string): ColorPalette => {
-    return colorPalettes[paletteId] || colorPalettes['adire-indigo'];
+export const getPalette = (paletteId?: string | null): ColorPalette => {
+    const palette = colorPalettes[paletteId ?? ''] ?? colorPalettes['adire-indigo'] ?? fallbackPalette;
+
+    return {
+        ...fallbackPalette,
+        ...palette,
+        primary: palette.primary || fallbackPalette.primary,
+        secondary: palette.secondary || fallbackPalette.secondary,
+        accent: palette.accent || fallbackPalette.accent,
+        background: palette.background || fallbackPalette.background,
+        text: palette.text || fallbackPalette.text,
+    };
 };
 
 /**

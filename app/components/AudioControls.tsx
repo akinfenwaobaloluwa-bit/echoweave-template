@@ -1,90 +1,126 @@
-// 📁 File: src/components/AudioControls.tsx
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 'use client';
 
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useEchoStore } from '@/app/store/useEchoStore';
+import { analyzeAudioBuffer, createAudioFeaturesFromSnapshots } from '@/app/lib/audioUtils';
 import { Mic, Upload, Play, Pause, Volume2 } from 'lucide-react';
 
-/**
- * AudioControls component - manages microphone and file upload for audio input
- */
+interface RecordingSnapshot {
+  volume: number;
+  bass: number;
+  treble: number;
+  pitch: number;
+  time: number;
+  frequencies: number[];
+}
+
 export const AudioControls = () => {
-  const { isRecording, setIsRecording, setAudioContext, setAnalyser, setAudioData } = useEchoStore();
+  const {
+    isRecording,
+    isAnalyzingAudio,
+    setIsRecording,
+    setIsAnalyzingAudio,
+    setAudioContext,
+    setAnalyser,
+    setAudioData,
+    setAudioFeatures,
+  } = useEchoStore();
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(70);
   const [error, setError] = useState<string | null>(null);
-  
+
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const animationRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recordingStartedAtRef = useRef(0);
+  const recordingSnapshotsRef = useRef<RecordingSnapshot[]>([]);
 
-  /**
-   * Request microphone access and start audio analysis
-   */
+  const stopRecording = () => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+
+    const duration = (performance.now() - recordingStartedAtRef.current) / 1000;
+    const features = createAudioFeaturesFromSnapshots(recordingSnapshotsRef.current, duration);
+
+    setAudioFeatures(features);
+    setIsRecording(false);
+    setAnalyser(null);
+    setAudioContext(null);
+  };
+
   const handleMicrophoneClick = async () => {
     try {
       setError(null);
 
       if (isRecording) {
-        setIsRecording(false);
+        stopRecording();
         return;
       }
 
-      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // Create audio context
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.7;
 
-      // Connect microphone to analyser
       const source = audioContext.createMediaStreamSource(stream);
       source.connect(analyser);
-      analyser.connect(audioContext.destination);
 
-      // Store in Zustand
+      streamRef.current = stream;
+      recordingStartedAtRef.current = performance.now();
+      recordingSnapshotsRef.current = [];
+
       setAudioContext(audioContext);
       setAnalyser(analyser);
+      setAudioFeatures(null);
       setIsRecording(true);
 
-      // Start analyzing audio
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const analyze = () => {
+      const analyzeLiveFrame = () => {
         analyser.getByteFrequencyData(dataArray);
 
-        // Calculate frequency bands
-        const bass = dataArray.slice(0, 4).reduce((a, b) => a + b) / 4;
-        const mid = dataArray.slice(4, 16).reduce((a, b) => a + b) / 12;
-        const treble = dataArray.slice(16, 32).reduce((a, b) => a + b) / 16;
-        const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        const bass = averageBytes(dataArray, 0, 8);
+        const pitch = averageBytes(dataArray, 8, 40);
+        const treble = averageBytes(dataArray, 40, dataArray.length);
+        const currentVolume = averageBytes(dataArray, 0, dataArray.length);
+        const elapsed = (performance.now() - recordingStartedAtRef.current) / 1000;
+        const compactSpectrum = compactFrequencies(dataArray, 32);
 
         setAudioData({
           bass,
           treble,
-          pitch: mid,
-          volume,
-          frequencies: dataArray,
+          pitch,
+          volume: currentVolume,
+          frequencies: new Uint8Array(dataArray),
         });
 
-        if (isRecording) {
-          requestAnimationFrame(analyze);
-        }
+        recordingSnapshotsRef.current.push({
+          bass,
+          treble,
+          pitch,
+          volume: currentVolume,
+          time: elapsed,
+          frequencies: compactSpectrum,
+        });
+
+        animationRef.current = requestAnimationFrame(analyzeLiveFrame);
       };
 
-      analyze();
+      analyzeLiveFrame();
     } catch (err) {
       setError('Microphone access denied. Please allow microphone access in your browser settings.');
       setIsRecording(false);
     }
   };
 
-  /**
-   * Handle file upload
-   */
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -92,61 +128,46 @@ export const AudioControls = () => {
     try {
       setError(null);
       setAudioFile(file);
+      setIsAnalyzingAudio(true);
+      setAudioFeatures(null);
 
-      // Create audio context
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-
-      // Read file and decode
       const arrayBuffer = await file.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+      const features = analyzeAudioBuffer(audioBuffer);
+      const spectrum = Uint8Array.from(features.frequencySpectrum.map((value) => Math.round(value * 255)));
 
-      // Create audio element
+      setAudioFeatures(features);
+      setAudioData({
+        volume: features.loudness * 255,
+        bass: (features.frequencySpectrum.slice(0, 6).reduce((sum, value) => sum + value, 0) / 6) * 255,
+        treble: (features.frequencySpectrum.slice(-8).reduce((sum, value) => sum + value, 0) / 8) * 255,
+        pitch: features.spectralCentroid * 255,
+        frequencies: spectrum,
+      });
+
+      await audioContext.close();
+      setAudioContext(null);
+      setAnalyser(null);
+
       const url = URL.createObjectURL(file);
       if (audioRef.current) {
+        if (audioRef.current.src) URL.revokeObjectURL(audioRef.current.src);
         audioRef.current.src = url;
         audioRef.current.volume = volume / 100;
       }
-
-      // Connect audio element to analyser
-      const source = audioContext.createMediaElementSource(audioRef.current!);
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-
-      setAudioContext(audioContext);
-      setAnalyser(analyser);
-
-      // Start analyzing audio
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const analyze = () => {
-        analyser.getByteFrequencyData(dataArray);
-
-        const bass = dataArray.slice(0, 4).reduce((a, b) => a + b) / 4;
-        const mid = dataArray.slice(4, 16).reduce((a, b) => a + b) / 12;
-        const treble = dataArray.slice(16, 32).reduce((a, b) => a + b) / 16;
-        const vol = dataArray.reduce((a, b) => a + b) / dataArray.length;
-
-        setAudioData({
-          bass,
-          treble,
-          pitch: mid,
-          volume: vol,
-          frequencies: dataArray,
-        });
-
-        requestAnimationFrame(analyze);
-      };
-
-      analyze();
     } catch (err) {
-      setError('Failed to load audio file. Please try another file.');
+      setError('Failed to analyze audio file. Please try another file.');
+    } finally {
+      setIsAnalyzingAudio(false);
     }
   };
 
-  /**
-   * Toggle audio playback
-   */
   const togglePlayback = () => {
     if (!audioRef.current) return;
 
@@ -158,9 +179,6 @@ export const AudioControls = () => {
     setIsPlaying(!isPlaying);
   };
 
-  /**
-   * Handle volume change
-   */
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseInt(e.target.value);
     setVolume(newVolume);
@@ -173,7 +191,6 @@ export const AudioControls = () => {
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Audio Input</h3>
 
-      {/* Error message */}
       {error && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -184,7 +201,6 @@ export const AudioControls = () => {
         </motion.div>
       )}
 
-      {/* Microphone button */}
       <motion.button
         onClick={handleMicrophoneClick}
         className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-200 ${
@@ -196,10 +212,9 @@ export const AudioControls = () => {
         whileTap={{ scale: 0.98 }}
       >
         <Mic className={`w-5 h-5 ${isRecording ? 'animate-pulse' : ''}`} />
-        {isRecording ? 'Stop Microphone' : 'Use Microphone'}
+        {isRecording ? 'Stop & Analyze Recording' : 'Use Microphone'}
       </motion.button>
 
-      {/* File upload */}
       <div>
         <input
           ref={fileInputRef}
@@ -213,13 +228,13 @@ export const AudioControls = () => {
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-slate-700 transition-all duration-200"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          disabled={isAnalyzingAudio}
         >
           <Upload className="w-5 h-5" />
-          Upload Audio File
+          {isAnalyzingAudio ? 'Analyzing Audio...' : 'Upload Audio File'}
         </motion.button>
       </div>
 
-      {/* Audio player controls (shown when file is uploaded) */}
       {audioFile && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -230,7 +245,6 @@ export const AudioControls = () => {
             {audioFile.name}
           </div>
 
-          {/* Play/Pause button */}
           <motion.button
             onClick={togglePlayback}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-all duration-200"
@@ -250,7 +264,6 @@ export const AudioControls = () => {
             )}
           </motion.button>
 
-          {/* Volume control */}
           <div className="flex items-center gap-2">
             <Volume2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             <input
@@ -264,7 +277,6 @@ export const AudioControls = () => {
             <span className="text-sm text-gray-600 dark:text-gray-400 w-8 text-right">{volume}%</span>
           </div>
 
-          {/* Hidden audio element */}
           <audio ref={audioRef} onEnded={() => setIsPlaying(false)} />
         </motion.div>
       )}
@@ -272,4 +284,24 @@ export const AudioControls = () => {
   );
 };
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const averageBytes = (array: Uint8Array, start: number, end: number): number => {
+  let total = 0;
+  const safeEnd = Math.min(array.length, end);
+
+  for (let i = start; i < safeEnd; i++) {
+    total += array[i];
+  }
+
+  return total / Math.max(1, safeEnd - start);
+};
+
+const compactFrequencies = (array: Uint8Array, bins: number): number[] => {
+  const result: number[] = [];
+  const stride = Math.max(1, Math.floor(array.length / bins));
+
+  for (let bin = 0; bin < bins; bin++) {
+    result.push(averageBytes(array, bin * stride, (bin + 1) * stride));
+  }
+
+  return result;
+};

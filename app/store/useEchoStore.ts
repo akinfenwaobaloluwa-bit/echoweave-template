@@ -2,6 +2,7 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import { create } from 'zustand';
+import { AudioFeatures } from '@/app/types/pattern';
 
 /**
  * Audio data interface representing frequency analysis results
@@ -27,6 +28,8 @@ export interface EchoStoreState {
     isRecording: boolean;
     audioContext: AudioContext | null;
     analyser: AnalyserNode | null;
+    audioFeatures: AudioFeatures | null;
+    isAnalyzingAudio: boolean;
 
     // UI state
     showWorkspace: boolean;
@@ -39,6 +42,8 @@ export interface EchoStoreState {
     setIsRecording: (recording: boolean) => void;
     setAudioContext: (context: AudioContext | null) => void;
     setAnalyser: (analyser: AnalyserNode | null) => void;
+    setAudioFeatures: (features: AudioFeatures | null) => void;
+    setIsAnalyzingAudio: (analyzing: boolean) => void;
     setShowWorkspace: (show: boolean) => void;
     setIsExporting: (exporting: boolean) => void;
     resetAudioData: () => void;
@@ -62,6 +67,8 @@ export const useEchoStore = create<EchoStoreState>((set) => ({
     isRecording: false,
     audioContext: null,
     analyser: null,
+    audioFeatures: null,
+    isAnalyzingAudio: false,
     showWorkspace: false,
     isExporting: false,
 
@@ -89,6 +96,12 @@ export const useEchoStore = create<EchoStoreState>((set) => ({
     // Action: Set analyser node
     setAnalyser: (analyser) => set({ analyser }),
 
+    // Action: Store one-time audio analysis
+    setAudioFeatures: (features) => set({ audioFeatures: features }),
+
+    // Action: Set analysis state
+    setIsAnalyzingAudio: (analyzing) => set({ isAnalyzingAudio: analyzing }),
+
     // Action: Toggle workspace visibility
     setShowWorkspace: (show) => set({ showWorkspace: show }),
 
@@ -105,6 +118,7 @@ export const useEchoStore = create<EchoStoreState>((set) => ({
                 pitch: 0,
                 frequencies: null,
             },
+            audioFeatures: null,
         }),
 }));
 
